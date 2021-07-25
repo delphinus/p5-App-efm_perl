@@ -1,3 +1,4 @@
+[![Actions Status](https://github.com/delphinus/p5-App-efm_perl/workflows/test/badge.svg)](https://github.com/delphinus/p5-App-efm_perl/actions)
 # NAME
 
 efm-perl - perl -c executable with errorformat friendly outputs.
