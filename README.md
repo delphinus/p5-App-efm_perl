@@ -1,14 +1,59 @@
 # NAME
 
-App::efm\_perl - It's new $module
+efm-perl - perl -c executable with errorformat friendly outputs.
 
 # SYNOPSIS
 
-    use App::efm_perl;
+efm-perl \[options\]
+
+    Options:
+      --filename, -f [filename]    Filename to lint. This is mandatory.
+      --lib, -I [paths]            Additional paths for $PERL5LIB.
+      --verbose, -v                Print all outputs.
+      --help, -h                   Show help message.
+
+    # load the script from -f option
+    efm-perl -f /path/to/script.pl
+
+    # load the script from STDIN but filter out by filename from -f option
+    cat /tmp/script.pl | efm-perl -f /path/to/script.pl
+
+# OPTIONS
+
+- **--lib**, **-I**
+
+    Additional paths for `PERL5LIB`
+
+- **--filename**, **-f**
+
+    Filename to lint. This is mandatory.
+
+- **--verbose**, **-v**
+
+    Print out all outputs. Without this, it shows errors only.
+
+- **--help**, **-h**
+
+    Print a help message.
 
 # DESCRIPTION
 
-App::efm\_perl is ...
+This is a tiny script to use with [mattn/efm-langserver](https://github.com/mattn/efm-langserver).
+It parses `perl -c` outputs and arrange them to errorformat-friendly ones.
+
+For efm-langserver, set config.yaml as below.
+
+    tools:
+      efm-perl: &efm-perl
+        lint-command: efm-perl -f ${INPUT}
+        lint-ignore-exit-code: true
+        lint-stdin: true
+        lint-formats:
+          - '%f:%l:%m'
+
+    languages:
+      perl:
+        - <<: *efm-perl
 
 # LICENSE
 
