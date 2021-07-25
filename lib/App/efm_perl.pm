@@ -10,6 +10,8 @@ our $VERSION = "0.03";
 1;
 __END__
 
+=for stopwords efm-perl errorformat
+
 =encoding utf-8
 
 =head1 NAME
