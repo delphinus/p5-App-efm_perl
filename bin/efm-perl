@@ -1,4 +1,82 @@
 #!/usr/bin/env perl
+use strict;
+use warnings;
+use File::Basename qw(basename dirname);
+use File::Copy qw(copy);
+use File::Slurp qw(read_file);
+use File::Temp qw(tempfile);
+use Getopt::Long qw(:config posix_default no_ignore_case bundling auto_help);
+use Pod::Usage qw(pod2usage);
+
+GetOptions(
+    \my %opt, qw/
+    lib|I=s
+    filename|f=s
+    verbose|v
+    help|h
+/) or pod2usage(1);
+
+pod2usage(-exitval => 1, -verbose => 2) if $opt{help};
+pod2usage(2) if grep { !exists $opt{$_} } qw/filename/;
+
+STDIN->blocking(0);
+my $script_text = do { local $/; <STDIN> };
+my ($script_fh, $script) = tempfile();
+if (defined $script_text) {
+    $script_fh->print($script_text);
+} else {
+    copy $opt{filename} => $script_fh;
+}
+$script_fh->close;
+
+chdir dirname $opt{filename};
+chomp(my $git_root = `git rev-parse --show-toplevel`);
+chdir $git_root if -d $git_root;
+
+my ($runner_fh, $runner) = tempfile();
+
+my ($shebang) = read_file($script);
+my $bin;
+($bin) = $shebang =~ /^#!(\S*)/ if defined $shebang;
+
+# $bin is NOT `env`, use the binary itself
+if (defined $bin && basename($bin) ne 'env') {
+    $runner_fh->print(<<EOS);
+export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
+$bin -c $script
+EOS
+
+# Otherwise, it should use perl resolved by $PATH and plenv.
+} else {
+    $runner_fh->print(<<EOS);
+#!/bin/bash
+if which plenv > /dev/null; then
+  eval "\$(plenv init -)"
+fi
+if which direnv > /dev/null; then
+  eval "\$(direnv export bash)"
+fi
+export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
+perl -c $script
+EOS
+}
+
+$runner_fh->close;
+
+my $error = qr{^(.*)\sat\s(.*)\sline\s(\d+)(\.|,\snear\s\".*\"?)$};
+open my $fh, "sh $runner 2>&1 |" or die $!;
+while (<$fh>) {
+    print if $opt{verbose};
+    chomp;
+    if (my ($message, $extracted_file, $lineno, $rest) = /$error/) {
+        next unless $extracted_file eq $script;
+        $message .= $rest if $rest =~ s/^,//;
+        print "$script:$lineno:$message\n";
+    }
+}
+close $fh;
+
+__END__
 
 =head1 NAME
 
@@ -61,81 +139,13 @@ For efm-langserver, set config.yaml as below.
       perl:
         - <<: *efm-perl
 
-=cut
+=head1 LICENSE
 
-use strict;
-use warnings;
-use File::Basename qw(basename dirname);
-use File::Copy qw(copy);
-use File::Slurp qw(read_file);
-use File::Temp qw(tempfile);
-use Getopt::Long qw(:config posix_default no_ignore_case bundling auto_help);
-use Pod::Usage qw(pod2usage);
+Copyright (C) delphinus.
 
-GetOptions(
-    \my %opt, qw/
-    lib|I=s
-    filename|f=s
-    verbose|v
-    help|h
-/) or pod2usage(1);
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
 
-pod2usage(-exitval => 1, -verbose => 2) if $opt{help};
-pod2usage(2) if grep { !exists $opt{$_} } qw/filename/;
+=head1 AUTHOR
 
-STDIN->blocking(0);
-my $script_text = do { local $/; <STDIN> };
-my ($script_fh, $script) = tempfile();
-if (defined $script_text) {
-    $script_fh->print($script_text);
-} else {
-    copy $opt{filename} => $script_fh;
-}
-$script_fh->close;
-
-chdir dirname $opt{filename};
-chomp(my $git_root = `git rev-parse --show-toplevel`);
-chdir $git_root if -d $git_root;
-
-my ($runner_fh, $runner) = tempfile();
-
-my ($shebang) = read_file($script);
-my $bin;
-($bin) = $shebang =~ m(^#!(\S*)) if defined $shebang;
-
-# $bin is NOT `env`, use the binary itself
-if (defined $bin && basename($bin) ne 'env') {
-    $runner_fh->print(<<EOS);
-export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
-$bin -c $script
-EOS
-
-# Otherwise, it should use perl resolved by $PATH and plenv.
-} else {
-    $runner_fh->print(<<EOS);
-#!/bin/bash
-if which plenv > /dev/null; then
-  eval "\$(plenv init -)"
-fi
-if which direnv > /dev/null; then
-  eval "\$(direnv export bash)"
-fi
-export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
-perl -c $script
-EOS
-}
-
-$runner_fh->close;
-
-my $error = qr{^(.*)\sat\s(.*)\sline\s(\d+)(\.|,\snear\s\".*\"?)$};
-open my $fh, "sh $runner 2>&1 |" or die $!;
-while (<$fh>) {
-    print if $opt{verbose};
-    chomp;
-    if (my ($message, $extracted_file, $lineno, $rest) = /$error/) {
-        next unless $extracted_file eq $script;
-        $message .= $rest if $rest =~ s/^,//;
-        print "$script:$lineno:$message\n";
-    }
-}
-close $fh;
+delphinus <me@delphinus.dev>

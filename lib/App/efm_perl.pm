@@ -16,13 +16,11 @@ __END__
 
 App::efm_perl - It's new $module
 
-=head1 SYNOPSIS
-
-    use App::efm_perl;
-
 =head1 DESCRIPTION
 
-App::efm_perl is ...
+This is a stub module containing the binary below.
+
+F<efm-perl> - perl -c executable with errorformat friendly outputs
 
 =head1 LICENSE
 
