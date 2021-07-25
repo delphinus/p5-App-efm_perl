@@ -15,7 +15,7 @@ sub chdir_to_root($) {
     chdir $git_root if defined $git_root && -d $git_root;
 }
 
-sub write_tmpfile {
+sub write_tempfile {
     my ($filename) = @_;
 
     STDIN->blocking(0);
