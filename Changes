@@ -2,6 +2,10 @@ Revision history for Perl extension App-efm_perl
 
 {{$NEXT}}
 
+0.03 2021-07-25T12:41:48Z
+
+    - Fix typo
+
 0.02 2021-07-25T12:39:33Z
 
     - Remove dependencies for CPAN modules
