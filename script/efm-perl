@@ -34,9 +34,8 @@ chdir $git_root if -d $git_root;
 
 my ($runner_fh, $runner) = tempfile();
 
-my ($shebang) = do {
+my $shebang = do {
     open my $fh, '<', $script or die $!;
-    local $/;
     <$fh>;
 };
 my $bin;
