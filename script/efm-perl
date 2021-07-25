@@ -7,50 +7,51 @@ use File::Temp qw(tempfile);
 use Getopt::Long qw(:config posix_default no_ignore_case bundling auto_help);
 use Pod::Usage qw(pod2usage);
 
-GetOptions(
-    \my %opt, qw/
-    lib|I=s
-    filename|f=s
-    verbose|v
-    help|h
-/) or pod2usage(1);
+sub chdir_to_root($) {
+    my ($filename) = @_;
 
-pod2usage(-exitval => 1, -verbose => 2) if $opt{help};
-pod2usage(2) if grep { !exists $opt{$_} } qw/filename/;
-
-STDIN->blocking(0);
-my $script_text = do { local $/; <STDIN> };
-my ($script_fh, $script) = tempfile();
-if (defined $script_text) {
-    $script_fh->print($script_text);
-} else {
-    copy $opt{filename} => $script_fh;
+    chdir dirname $filename;
+    chomp(my $git_root = `git rev-parse --show-toplevel`);
+    chdir $git_root if defined $git_root && -d $git_root;
 }
-$script_fh->close;
 
-chdir dirname $opt{filename};
-chomp(my $git_root = `git rev-parse --show-toplevel`);
-chdir $git_root if -d $git_root;
+sub write_tmpfile {
+    my ($filename) = @_;
 
-my ($runner_fh, $runner) = tempfile();
+    STDIN->blocking(0);
+    my $script_text = do { local $/; <STDIN> };
+    my ($script_fh, $script) = tempfile();
+    if (defined $script_text) {
+        $script_fh->print($script_text);
+    } else {
+        copy $filename => $script_fh;
+    }
+    $script_fh->close;
+    $script;
+}
 
-my $shebang = do {
-    open my $fh, '<', $script or die $!;
-    <$fh>;
-};
-my $bin;
-($bin) = $shebang =~ /^#!(\S*)/ if defined $shebang;
+sub create_runner($$) {
+    my ($script, $lib) = @_;
 
-# $bin is NOT `env`, use the binary itself
-if (defined $bin && basename($bin) ne 'env') {
-    $runner_fh->print(<<EOS);
-export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
+    my ($runner_fh, $runner) = tempfile();
+
+    my $shebang = do {
+        open my $fh, '<', $script or die $!;
+        <$fh>;
+    };
+    my $bin;
+    ($bin) = $shebang =~ /^#!(\S*)/ if defined $shebang;
+
+    # $bin is NOT `env`, use the binary itself
+    if (defined $bin && basename($bin) ne 'env') {
+        $runner_fh->print(<<EOS);
+export PERL5LIB=@{[$lib // '']}:\$PERL5LIB
 $bin -c $script
 EOS
 
-# Otherwise, it should use perl resolved by $PATH and plenv.
-} else {
-    $runner_fh->print(<<EOS);
+    # Otherwise, it should use perl resolved by $PATH and plenv.
+    } else {
+        $runner_fh->print(<<EOS);
 #!/bin/bash
 if which plenv > /dev/null; then
   eval "\$(plenv init -)"
@@ -58,25 +59,50 @@ fi
 if which direnv > /dev/null; then
   eval "\$(direnv export bash)"
 fi
-export PERL5LIB=@{[$opt{lib} // '']}:\$PERL5LIB
+export PERL5LIB=@{[$lib // '']}:\$PERL5LIB
 perl -c $script
 EOS
-}
-
-$runner_fh->close;
-
-my $error = qr{^(.*)\sat\s(.*)\sline\s(\d+)(\.|,\snear\s\".*\"?)$};
-open my $fh, "sh $runner 2>&1 |" or die $!;
-while (<$fh>) {
-    print if $opt{verbose};
-    chomp;
-    if (my ($message, $extracted_file, $lineno, $rest) = /$error/) {
-        next unless $extracted_file eq $script;
-        $message .= $rest if $rest =~ s/^,//;
-        print "$script:$lineno:$message\n";
     }
+
+    $runner_fh->close;
+    $runner;
 }
-close $fh;
+
+sub run($$$) {
+    my ($runner, $script, $verbose) = @_;
+
+    my $error = qr{^(.*)\sat\s(.*)\sline\s(\d+)(\.|,\snear\s\".*\"?)$};
+    open my $fh, "sh $runner 2>&1 |" or die $!;
+    while (<$fh>) {
+        print if $verbose;
+        chomp;
+        if (my ($message, $extracted_file, $lineno, $rest) = /$error/) {
+            next unless $extracted_file eq $script;
+            $message .= $rest if $rest =~ s/^,//;
+            print "$script:$lineno:$message\n";
+        }
+    }
+    close $fh;
+}
+
+sub main {
+    GetOptions(
+        'lib|I=s' => \(my $lib),
+        'filename|f=s' => \(my $filename),
+        'verbose|v' => \(my $verbose),
+        'help|h' => \(my $help),
+    ) or pod2usage(1);
+
+    pod2usage(-exitval => 1, -verbose => 2) if $help;
+    pod2usage(2) unless defined $filename;
+
+    chdir_to_root $filename;
+    my $script = write_tempfile $filename;
+    my $runner = create_runner $script, $lib;
+    run $runner, $script, $verbose;
+}
+
+main if $0 eq __FILE__;
 
 __END__
 
