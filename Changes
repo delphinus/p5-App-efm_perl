@@ -2,6 +2,10 @@ Revision history for Perl extension App-efm_perl
 
 {{$NEXT}}
 
+0.04 2021-07-25T14:17:53Z
+
+    - Add tests
+
 0.03 2021-07-25T12:41:48Z
 
     - Fix typo
