@@ -183,6 +183,16 @@ For efm-langserver, set config.yaml as below.
       perl:
         - <<: *efm-perl
 
+=head1 USAGE
+
+You can install F<efm-perl> with F<cpanm>.
+
+    cpanm install App::efm_perl
+
+Or you can use simply by copying the script.
+
+    cp script/efm-perl /path/to/your/$PATH
+
 =head1 LICENSE
 
 Copyright (C) delphinus.
