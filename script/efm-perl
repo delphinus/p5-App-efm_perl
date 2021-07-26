@@ -9,6 +9,13 @@ use IO::File;
 use IPC::Open2 qw(open2);
 use Pod::Usage qw(pod2usage);
 
+# $VERSION depends on the stub module App::efm_perl. When this script is used
+# without installing from CPAN, it uses fixed string for this.
+our $VERSION = eval {
+    require App::efm_perl;
+    $App::efm_perl::VERSION;
+} // '0.0.1-script-only';
+
 sub chdir_to_root {
     my ($filename) = @_;
 
@@ -106,9 +113,11 @@ sub main {
         'filename|f=s' => \(my $filename),
         'verbose|v' => \(my $verbose),
         'help|h' => \(my $help),
+        'version' => \(my $version),
     ) or pod2usage(1);
 
     pod2usage(-exitval => 1, -verbose => 2) if $help;
+    print("$VERSION\n"), exit 0 if $version;
     pod2usage(2) unless defined $filename;
 
     chdir_to_root($filename);
@@ -135,6 +144,7 @@ efm-perl [options]
       --lib, -I [paths]            Additional paths for $PERL5LIB.
       --verbose, -v                Print all outputs.
       --help, -h                   Show help message.
+      --version                    Show the version string.
 
     # load the script from -f option
     efm-perl -f /path/to/script.pl
