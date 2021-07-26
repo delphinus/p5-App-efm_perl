@@ -5,21 +5,27 @@ use File::Basename qw(basename dirname);
 use File::Copy qw(copy);
 use File::Temp qw(tempfile);
 use Getopt::Long qw(:config posix_default no_ignore_case bundling auto_help);
+use IO::File;
+use IPC::Open2 qw(open2);
 use Pod::Usage qw(pod2usage);
 
-sub chdir_to_root($) {
+sub chdir_to_root {
     my ($filename) = @_;
 
     chdir dirname $filename;
-    chomp(my $git_root = `git rev-parse --show-toplevel`);
+    # ignore STDERR
+    open2 my $reader, undef, 'git rev-parse --show-toplevel';
+    chomp(my $git_root = <$reader>);
     chdir $git_root if defined $git_root && -d $git_root;
+    return;
 }
 
 sub write_tempfile {
     my ($filename) = @_;
 
     STDIN->blocking(0);
-    my $script_text = do { local $/; <STDIN> };
+    ## no critic (Variables::RequireInitializationForLocalVars)
+    my $script_text = do { local $/; <> };
     my ($script_fh, $script) = tempfile();
     if (defined $script_text) {
         $script_fh->print($script_text);
@@ -27,31 +33,32 @@ sub write_tempfile {
         copy $filename => $script_fh;
     }
     $script_fh->close;
-    $script;
+    return $script;
 }
 
-sub create_runner($$) {
+sub create_runner {
     my ($script, $lib) = @_;
 
     my ($runner_fh, $runner) = tempfile();
 
     my $shebang = do {
-        open my $fh, '<', $script or die $!;
+        my $fh = IO::File->new($script, 'r');
         <$fh>;
     };
     my $bin;
+    ## no critic (RegularExpressions::RequireExtendedFormatting)
     ($bin) = $shebang =~ /^#!(\S*)/ if defined $shebang;
 
     # $bin is NOT `env`, use the binary itself
     if (defined $bin && basename($bin) ne 'env') {
-        $runner_fh->print(<<EOS);
+        $runner_fh->print(<<"EOS");
 export PERL5LIB=@{[$lib // '']}:\$PERL5LIB
 $bin -c $script
 EOS
 
     # Otherwise, it should use perl resolved by $PATH and plenv.
     } else {
-        $runner_fh->print(<<EOS);
+        $runner_fh->print(<<"EOS");
 #!/bin/bash
 if which plenv > /dev/null; then
   eval "\$(plenv init -)"
@@ -65,24 +72,32 @@ EOS
     }
 
     $runner_fh->close;
-    $runner;
+    return $runner;
 }
 
-sub run($$$) {
+sub run {
     my ($runner, $script, $verbose) = @_;
 
-    my $error = qr{^(.*)\sat\s(.*)\sline\s(\d+)(\.|,\snear\s\".*\"?)$};
-    open my $fh, "sh $runner 2>&1 |" or die $!;
-    while (<$fh>) {
+    open2 my $reader, undef, "sh $runner 2>&1";
+    while (<$reader>) {
         print if $verbose;
         chomp;
-        if (my ($message, $extracted_file, $lineno, $rest) = /$error/) {
+        if (my ($message, $extracted_file, $lineno, $rest) = /
+            ^(.*)\s
+            at\s(.*)\s
+            line\s(\d+)
+            (
+                \.|
+                ,\snear\s\".*\"?
+            )$
+        /x) {
             next unless $extracted_file eq $script;
+            ## no critic (RegularExpressions::RequireExtendedFormatting)
             $message .= $rest if $rest =~ s/^,//;
             print "$script:$lineno:$message\n";
         }
     }
-    close $fh;
+    return;
 }
 
 sub main {
@@ -96,10 +111,11 @@ sub main {
     pod2usage(-exitval => 1, -verbose => 2) if $help;
     pod2usage(2) unless defined $filename;
 
-    chdir_to_root $filename;
-    my $script = write_tempfile $filename;
-    my $runner = create_runner $script, $lib;
-    run $runner, $script, $verbose;
+    chdir_to_root($filename);
+    my $script = write_tempfile($filename);
+    my $runner = create_runner($script, $lib);
+    run($runner, $script, $verbose);
+    exit 0;
 }
 
 main if $0 eq __FILE__;
