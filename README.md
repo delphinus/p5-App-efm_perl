@@ -12,6 +12,7 @@ efm-perl \[options\]
       --lib, -I [paths]            Additional paths for $PERL5LIB.
       --verbose, -v                Print all outputs.
       --help, -h                   Show help message.
+      --version                    Show the version string.
 
     # load the script from -f option
     efm-perl -f /path/to/script.pl
@@ -55,6 +56,16 @@ For efm-langserver, set config.yaml as below.
     languages:
       perl:
         - <<: *efm-perl
+
+# USAGE
+
+You can install `efm-perl` with `cpanm`.
+
+    cpanm install App::efm_perl
+
+Or you can use simply by copying the script.
+
+    cp script/efm-perl /path/to/your/$PATH
 
 # LICENSE
 

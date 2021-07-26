@@ -2,6 +2,11 @@ Revision history for Perl extension App-efm_perl
 
 {{$NEXT}}
 
+0.06 2021-07-26T04:01:50Z
+
+    - Add --version option
+    - Add install instruction on POD
+
 0.05 2021-07-26T03:23:36Z
 
     - Fix for perlcritic
