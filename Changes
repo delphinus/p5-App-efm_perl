@@ -2,6 +2,10 @@ Revision history for Perl extension App-efm_perl
 
 {{$NEXT}}
 
+1.0.0 2021-07-26T06:17:52Z
+
+    - The first public release
+
 0.06 2021-07-26T04:01:50Z
 
     - Add --version option
