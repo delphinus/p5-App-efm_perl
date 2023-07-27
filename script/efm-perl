@@ -74,7 +74,7 @@ if which direnv > /dev/null; then
   eval "\$(direnv export bash)"
 fi
 if which asdf > /dev/null; then
-  ASDF_DIR=$(asdf info | grep ASDF_DIR | cut -d= -f2)
+  ASDF_DIR=\$(asdf info | grep ASDF_DIR | cut -d= -f2)
   source "\$ASDF_DIR/asdf.sh"
 fi
 PERL=perl
