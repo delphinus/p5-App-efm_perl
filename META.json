@@ -4,7 +4,7 @@
       "delphinus <me@delphinus.dev>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.1.14, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.19, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "mit"
    ],
@@ -63,11 +63,11 @@
       "homepage" : "https://github.com/delphinus/p5-App-efm_perl",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/delphinus/p5-App-efm_perl.git",
+         "url" : "https://github.com/delphinus/p5-App-efm_perl.git",
          "web" : "https://github.com/delphinus/p5-App-efm_perl"
       }
    },
-   "version" : "1.1.0",
+   "version" : "1.2.0",
    "x_serialization_backend" : "JSON::PP version 4.07",
    "x_static_install" : 1
 }
