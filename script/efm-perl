@@ -73,10 +73,11 @@ fi
 if which direnv > /dev/null; then
   eval "\$(direnv export bash)"
 fi
-PERL=perl
 if which asdf > /dev/null; then
-  PERL="asdf exec perl"
+  ASDF_DIR=$(asdf info | grep ASDF_DIR | cut -d= -f2)
+  source "\$ASDF_DIR/asdf.sh"
 fi
+PERL=perl
 export PERL5LIB=@{[$lib // '']}:\$PERL5LIB
 \$PERL -c $script
 EOS
