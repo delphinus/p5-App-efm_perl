@@ -78,6 +78,11 @@ if which asdf > /dev/null; then
   source "\$ASDF_DIR/asdf.sh"
 fi
 PERL=perl
+if which carmel > /dev/null; then
+  PERL='carmel exec -- perl'
+elif which carton > /dev/null; then
+  PERL='carton exec -- perl'
+fi
 export PERL5LIB=@{[$lib // '']}:\$PERL5LIB
 \$PERL -c $script
 EOS
