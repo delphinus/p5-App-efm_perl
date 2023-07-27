@@ -67,7 +67,7 @@
          "web" : "https://github.com/delphinus/p5-App-efm_perl"
       }
    },
-   "version" : "1.2.0",
+   "version" : "1.2.1",
    "x_serialization_backend" : "JSON::PP version 4.07",
    "x_static_install" : 1
 }

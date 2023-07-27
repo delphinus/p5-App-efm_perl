@@ -2,6 +2,9 @@ Revision history for Perl extension App-efm_perl
 
 {{$NEXT}}
 
+1.2.1 2023-07-27T04:28:55Z
+    - Fix bug by typo
+
 1.2.0 2023-07-27T04:23:47Z
     - Use the valid way to detect asdf
     - Detect carmel or carton
